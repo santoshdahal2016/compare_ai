@@ -1,0 +1,14 @@
+{
+    "name": "nepali_translation",
+    "description": "Nepali translation dataset",
+    "entries": [ 
+        {
+            "input":{ "text": "नमस्ते दुनिया"},
+            "output": { "text": "Hello World"}
+        },
+        {
+            "input": { "text": "नमस्ते दुनिया" },
+            "output": { "text": "Hello World" }
+        }
+    ]
+}

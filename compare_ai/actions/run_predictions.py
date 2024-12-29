@@ -1,61 +1,31 @@
-import requests
-from abc import ABC, abstractmethod
-from results_manager import result as Result
-
-class ModelCaller(ABC):
-    @abstractmethod
-    def call_model(self, endpoint, data):
-        pass
-
-class OpenAIModelCaller(ModelCaller):
-    def call_model(self, endpoint, data):
-        response = requests.post(
-            endpoint,
-            json={"model": self.model_name, "messages": data},
-            headers={"Authorization": f"Bearer {self.api_key}"}
-        )
-        return response.json()
-
-class AnthropicModelCaller(ModelCaller):
-    def call_model(self, endpoint, data):
-        response = requests.post(
-            endpoint,
-            json={"model": self.model_name, "prompt": data},
-            headers={"x-api-key": self.api_key}
-        )
-        return response.json()
-
-class RunPrediction:
-    MODEL_CALLERS = {
-        "openai": OpenAIModelCaller,
-        "anthropic": AnthropicModelCaller,
-        # Add more model types here
-    }
-
-    def __init__(self, model, dataset):
-        self.model = model
-        self.dataset = dataset
-        self.model_caller = self._get_model_caller()
-
-    def _get_model_caller(self):
-        caller_class = self.MODEL_CALLERS.get(self.model.model_type)
-        if not caller_class:
-            raise ValueError(f"Unsupported model type: {self.model.model_type}")
-        return caller_class()
-
-    def execute(self):
-        """
-        Executes the prediction using the provided model and dataset.
-        """
-        test_data = self.dataset.get_data()
+def run_predictions(eval_dataset, models):
+    """
+    Run predictions on evaluation dataset using provided models.
+    
+    Args:
+        eval_dataset: Dataset to evaluate models on
+        models: List of models to compare
         
-        try:
-            predictions = self.model_caller.call_model(
-                self.model.get_endpoint(),
-                test_data
-            )
-        except requests.exceptions.RequestException as e:
-            raise RuntimeError(f"Error calling model endpoint: {e}")
+    Returns:
+        dict: Dictionary containing prediction results for each model
+    """
 
-        return Result(predictions)
-
+    results = {}
+    
+    for model in models:
+        model_predictions = []
+        
+        for item in eval_dataset:
+            try:
+                prediction = model.predict(item)
+                model_predictions.append({
+                    'input': item,
+                    'prediction': prediction
+                })
+            except Exception as e:
+                print(f"Error running prediction for model {model}: {str(e)}")
+                continue
+                
+        results[model.name] = model_predictions
+    
+    return results

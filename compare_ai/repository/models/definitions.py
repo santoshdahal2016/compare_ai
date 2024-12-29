@@ -1,13 +1,6 @@
-from enum import Enum, auto
-from typing import Dict, Set, List, Optional, Union, Any
+from enum import Enum
+from typing import Dict, Set, List, Optional, Any
 from dataclasses import dataclass
-
-class Modality(Enum):
-    TEXT = "text"
-    IMAGE = "image"
-    AUDIO = "audio"
-    VIDEO = "video"
-    MULTIMODAL = "multimodal"
 
 class TaskType(Enum):
     # Text Tasks
@@ -30,17 +23,3 @@ class TaskType(Enum):
     # Multimodal Tasks
     VISUAL_QA = "visual_qa"
     IMAGE_CAPTIONING = "image_captioning"
-
-@dataclass
-class ModelMetrics:
-    accuracy: Optional[float] = None
-    latency: Optional[float] = None  # in milliseconds
-    throughput: Optional[int] = None  # requests per second
-    custom_metrics: Dict[str, Any] = None
-
-@dataclass
-class TaskRequirements:
-    input_format: Dict[str, Any]
-    output_format: Dict[str, Any]
-    max_input_size: int
-    supported_languages: Optional[List[str]] = None 
