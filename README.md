@@ -148,8 +148,14 @@ poetry install --extras all
 ### **Using Providers**
 
 ```python
+
+from compare_ai.repository.evaluation_datasets import  MMLUDataset
+
 from compare_ai.repository.models import ModelRegistry
 from compare_ai.repository.models.definitions import TaskType, Modality
+
+
+from compare_ai.repository.actions import run_prediction
 
 # Initialize with provider configurations
 config = {
@@ -170,8 +176,13 @@ text_models = registry.find_models(
     modality=Modality.TEXT
 )
 
-# Use a model
-result = text_models[0].predict("Hello, world!")
+
+eval_dataset = MMLUDataset(system_prompts=["","You are an expert academic assistant who answers questions precisely and accurately"])
+
+
+
+
+result = run_prediction(models=text_models,eval_dataset=eval_dataset)
 ```
 
 ### **Creating New Providers**
