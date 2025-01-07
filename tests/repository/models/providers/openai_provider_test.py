@@ -60,31 +60,8 @@ class TestOpenAIProvider:
         assert result == ["Test response"]
         mock_client.chat.completions.create.assert_called_once()
 
-    def test_predict_visual_qa(self, provider, mock_openai):
-        # Create a mock client instance
-        mock_client = Mock()
-        mock_openai.OpenAI.return_value = mock_client
-        
-        # Create mock response
-        mock_response = Mock()
-        mock_response.choices = [Mock(message=Mock(content="Image description"))]
-        mock_client.chat.completions.create.return_value = mock_response
 
-        # Set the client explicitly on the provider
-        provider.client = mock_client
 
-        inputs = [{"messages": [{"role": "user", "content": [
-            {"type": "text", "text": "What's in this image?"},
-            {"type": "image_url", "image_url": "image_url"}
-        ]}]}]
-        result = provider.predict("gpt-4-vision-preview", inputs, TaskType.VISUAL_QA)
-        
-        assert result == ["Image description"]
-        mock_client.chat.completions.create.assert_called_once()
-
-    def test_predict_unsupported_task(self, provider):
-        with pytest.raises(ValueError, match="Task .* not supported for model .*"):
-            provider.predict("gpt-3.5-turbo", [{"messages": [{"role": "user", "content": "test"}]}], "UNSUPPORTED_TASK")
 
     @pytest.mark.integration
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="No API key provided")

@@ -21,7 +21,6 @@ class MMLUDataset(TextGenerationEvaluationDataset):
         """Load MMLU dataset from Hugging Face's CAIS format."""
         try:
             dataset = load_dataset("cais/mmlu", "all")
-            print(dataset)
             self.entries = dataset["test"]
         except Exception as e:
             raise RuntimeError(f"Failed to load MMLU dataset: {str(e)}")

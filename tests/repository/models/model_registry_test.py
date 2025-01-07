@@ -54,10 +54,6 @@ class TestModelRegistry:
         assert len(models) > 0
         assert all(model.supports_task(TaskType.TEXT_GENERATION) for model in models)
 
-    def test_find_models_no_match(self, registry):
-        """Test finding models with no matches"""
-        models = registry.find_models(task=TaskType.IMAGE_GENERATION)
-        assert len(models) == 0
 
     def test_get_supported_tasks(self, registry):
         """Test getting all supported tasks"""

@@ -48,11 +48,11 @@ class OpenaiProvider(Provider):
         return [
             {
                 "model_name": "gpt-4",
-                "task_support": [TaskType.TEXT_GENERATION, TaskType.VISUAL_QA],
+                "task_support": [TaskType.TEXT_GENERATION],
             },
             {
                 "model_name": "gpt-4-vision-preview",
-                "task_support": [TaskType.VISUAL_QA]
+                "task_support": [TaskType.TEXT_GENERATION]
             },
             {
                 "model_name": "gpt-3.5-turbo",
@@ -73,9 +73,7 @@ class OpenaiProvider(Provider):
         """
         if task == TaskType.TEXT_GENERATION:
             return self._predict_text(model_name, inputs)
-        elif task == TaskType.VISUAL_QA:
-            return self._predict_visual(model_name, inputs)
-        raise ValueError(f"Task {task} not supported for model {model_name}")
+ 
 
     def _predict_text(self, model_name: str, inputs: List[Dict[str, Any]]) -> List[str]:
         """Handle text generation predictions."""
@@ -90,43 +88,11 @@ class OpenaiProvider(Provider):
             responses.append(response.choices[0].message.content)
         return responses
 
-    def _predict_visual(self, model_name: str, inputs: List[Dict[str, Any]]) -> List[str]:
-        """Handle visual Q&A predictions."""
-        responses = []
-        for input_data in inputs:
-            # Extract image URL and text from messages if present
-            if "messages" in input_data:
-                message = input_data["messages"][0]
-                content = message["content"]
-                text = next((item["text"] for item in content if item["type"] == "text"), "")
-                image = next((item["image_url"] for item in content if item["type"] == "image_url"), None)
-            else:
-                text = input_data.get("text", "")
-                image = input_data.get("image")
-
-            if not image:
-                raise ValueError("Image input required for visual Q&A task")
-                
-            response = self.client.chat.completions.create(
-                model=model_name,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": text},
-                        {"type": "image_url", "image_url": image}
-                    ]
-                }]
-            )
-            responses.append(response.choices[0].message.content)
-        return responses
-
-
 
     def _get_supported_formats(self, task: TaskType) -> List[str]:
         """Get supported formats for task."""
         format_map = {
-            TaskType.TEXT_GENERATION: ["txt", "md", "json"],
-            TaskType.VISUAL_QA: ["png", "jpg", "jpeg"]
+            TaskType.TEXT_GENERATION: ["txt", "md", "json"]
         }
         return format_map.get(task, [])
 
