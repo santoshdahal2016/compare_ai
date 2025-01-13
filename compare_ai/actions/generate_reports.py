@@ -35,11 +35,13 @@ def validate_data_format(data):
             if not isinstance(model_name, str):
                 raise ValueError("Each key in 'models' must be a string representing a model name.")
             
-            if not isinstance(labels, (int, float, dict)):
-                raise ValueError("Each value in 'models' must be an int, float, or dictionary.")
+            if item["type"] == "numerical" and not isinstance(labels, (int, float)):
+                raise ValueError("For numerical metrics, values must be int or float.")
             
-            # If labels is a dictionary, validate the label keys and values
-            if isinstance(labels, dict):
+            if item["type"] == "categorical" and not isinstance(labels, dict):
+                raise ValueError("For categorical metrics, values must be a dictionary.")
+            
+            if item["type"] == "categorical":
                 for label, value in labels.items():
                     if not isinstance(label, str):
                         raise ValueError("Each key in the labels dictionary must be a string.")
@@ -49,158 +51,93 @@ def validate_data_format(data):
     
     return True
 
-def generate_comparison_plot(data):
+def generate_metric_plot(metric_name, metric_type, models):
     """
-    Generates a colorful bar chart for model comparison based on the data provided.
+    Generates a plot for a single metric based on its type and model data.
     """
-    models = []
-    accuracy_values = []
-
-    # Collect model data for categorical types
-    for item in data:
-        if item["type"] == "categorical":
-            for model_name, labels in item["models"].items():
-                models.append(model_name)
-                accuracy = sum(labels.values())  # Sum up the scores for each model
-                accuracy_values.append(accuracy)
-
-    # Plotting the data with colors
-    plt.figure(figsize=(10, 6))
-    colors = plt.cm.Paired(np.linspace(0, 1, len(models)))  # Generate a color palette
-    plt.bar(models, accuracy_values, color=colors)
-    plt.xlabel('Models')
-    plt.ylabel('Accuracy')
-    plt.title('Model Comparison')
-    plt.xticks(rotation=45, ha='right')
-
-    # Save the plot to a temporary file
-    plot_file = "model_comparison_plot.png"
-    plt.tight_layout()
-    plt.savefig(plot_file)
-    plt.close()
-
+    plot_file = f"{metric_name.replace(' ', '_')}_plot.png"
+    
+    if metric_type == "numerical":
+        # Bar chart for numerical metrics
+        model_names = list(models.keys())
+        values = list(models.values())
+        colors = plt.cm.Paired(np.linspace(0, 1, len(model_names)))
+        
+        plt.figure(figsize=(8, 5))
+        plt.bar(model_names, values, color=colors)
+        plt.xlabel("Models")
+        plt.ylabel("Value")
+        # plt.title(f"Numerical Metric: {metric_name}")
+        plt.tight_layout()
+        plt.savefig(plot_file)
+        plt.close()
+    
+    elif metric_type == "categorical":
+        # Stacked bar chart for categorical metrics
+        labels = set(label for model in models.values() for label in model.keys())
+        label_indices = {label: i for i, label in enumerate(labels)}
+        
+        model_names = list(models.keys())
+        data = np.zeros((len(model_names), len(labels)))
+        
+        for i, model in enumerate(model_names):
+            for label, count in models[model].items():
+                data[i, label_indices[label]] = count
+        
+        indices = np.arange(len(model_names))
+        bar_width = 0.8 / len(labels)
+        
+        plt.figure(figsize=(10, 6))
+        for i, label in enumerate(labels):
+            plt.bar(indices + i * bar_width, data[:, i], bar_width, label=label)
+        
+        plt.xlabel("Models")
+        plt.ylabel("Count")
+        # plt.title(f"Categorical Metric: {metric_name}")
+        plt.xticks(indices + bar_width * (len(labels) / 2), model_names, rotation=45, ha="right")
+        plt.legend(title="Categories")
+        plt.tight_layout()
+        plt.savefig(plot_file)
+        plt.close()
+    
     return plot_file
 
-def generate_likert_scale_plot(data):
+def generate_pdf_report(data, plot_files):
     """
-    Generates a Likert Scale bar chart for categorical metrics based on the data provided.
-    """
-    # Prepare data for Likert scale comparison
-    likert_categories = ['Inaccurate', 'Partially Accurate', 'Accurate']
-    models = list(set([model for item in data for model in item["models"].keys()]))
-    likert_data = {model: [0, 0, 0] for model in models}
-
-    # Fill in the Likert scale values
-    for item in data:
-        if item["type"] == "categorical":
-            for model_name, labels in item["models"].items():
-                for label, count in labels.items():
-                    if label == 'inaccurate':
-                        likert_data[model_name][0] += count
-                    elif label == 'partially_accurate':
-                        likert_data[model_name][1] += count
-                    elif label == 'accurate':
-                        likert_data[model_name][2] += count
-
-    # Plotting the Likert scale data
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bar_width = 0.2
-    index = np.arange(len(models))
-
-    # Plot each Likert scale category
-    for i, category in enumerate(likert_categories):
-        category_values = [likert_data[model][i] for model in models]
-        ax.bar(index + i * bar_width, category_values, bar_width, label=category)
-
-    ax.set_xlabel('Models')
-    ax.set_ylabel('Count')
-    ax.set_title(' Comparison of Models')
-    ax.set_xticks(index + bar_width)
-    ax.set_xticklabels(models)
-    ax.legend()
-
-    # Save the plot to a temporary file
-    likert_plot_file = "likert_scale_comparison.png"
-    plt.tight_layout()
-    plt.savefig(likert_plot_file)
-    plt.close()
-
-    return likert_plot_file
-
-def generate_pdf_report(data, plot_file, likert_plot_file):
-    """
-    Generates a PDF report with the model comparison plot and Likert scale comparison.
+    Generates a PDF report with plots for each metric.
     """
     file_name = "model_comparison_report.pdf"
-    
     c = canvas.Canvas(file_name, pagesize=letter)
     c.setFont("Helvetica", 12)
-    
-    # Add a title
     c.drawString(100, 750, "Model Comparison Report")
     
-    # Insert the model comparison plot image
-    c.drawImage(plot_file, 100, 450, width=400, height=300)
+    y_position = 700
+    for metric_name, plot_file in plot_files:
+        c.drawString(50, y_position, metric_name)
+        c.drawImage(plot_file, 50, y_position - 310, width=500, height=300)
+        y_position -= 350
+        if y_position < 100:
+            c.showPage()
+            y_position = 750
 
-    # Insert the Likert scale comparison plot
-    c.drawImage(likert_plot_file, 100, 100, width=400, height=300)
-
-    # Save the PDF
     c.save()
 
-    # Clean up the plot files
-    os.remove(plot_file)
-    os.remove(likert_plot_file)
+    # Clean up plot files
+    for _, plot_file in plot_files:
+        os.remove(plot_file)
 
     return file_name
 
 def generate_report(data):
-    """Generate a report from the validated data."""
+    """Generate a detailed report with individual metric plots."""
     validate_data_format(data)
     
-    # Generate the comparison plot
-    plot_file = generate_comparison_plot(data)
-    
-    # Generate the Likert scale plot
-    likert_plot_file = generate_likert_scale_plot(data)
+    # Generate plots for each metric
+    plot_files = []
+    for item in data:
+        plot_file = generate_metric_plot(item["name"], item["type"], item["models"])
+        plot_files.append((item["name"], plot_file))
     
     # Generate the PDF report
-    pdf_file = generate_pdf_report(data, plot_file, likert_plot_file)
+    pdf_file = generate_pdf_report(data, plot_files)
     return pdf_file
-
-
-# Example usage with dynamically loaded data
-if __name__ == "__main__":
-    # Example data
-    data = [
-        {
-            "name": "usability_gap",
-            "type": "categorical",  
-            "models":{
-                "gpt-3": {
-                    "partially_accurate": 4,
-                    "inaccurate": 2,
-                    "accurate": 1
-                },
-                "gpt-4": {
-                    "partially_accurate": 2,
-                    "inaccurate": 1,
-                    "accurate": 4
-                }
-            }
-        },
-        {
-            "name": "BLUE Score",
-            "type": "numerical",  
-            "models":{
-                "gpt-3": 98,
-                "gpt-4": 99
-            }
-        }
-    ]
-
-    try:
-        report = generate_report(data)
-        print(f"Report generated successfully: {report}")
-    except ValueError as e:
-        print(f"Error: {e}")
